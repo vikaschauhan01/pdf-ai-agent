@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Document Extractor</title>
+
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+
+        .container{
+            border:1px solid #ddd;
+            padding:20px;
+            border-radius:10px;
+        }
+
+        input{
+            margin:20px 0;
+        }
+
+        button{
+            padding:10px 20px;
+            cursor:pointer;
+        }
+
+        #result{
+            margin-top:30px;
+            border:1px solid #ddd;
+            padding:15px;
+            min-height:300px;
+            white-space: pre-wrap;
+            overflow:auto;
+        }
+
+        .loading{
+            color:blue;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <h2>OCR Document Extractor</h2>
+
+    <input type="file" id="file" accept=".pdf,.png,.jpg,.jpeg">
+
+    <br>
+
+    <button onclick="uploadFile()">
+        Extract Text
+    </button>
+
+    <div id="status"></div>
+
+    <h3>Extracted Text</h3>
+
+    <div id="result"></div>
+
+</div>
+
+<script>
+
+async function uploadFile(){
+
+    const fileInput = document.getElementById("file");
+
+    if(!fileInput.files.length){
+        alert("Please select a file");
+        return;
+    }
+
+    const formData = new FormData();
+
+    formData.append(
+        "document",
+        fileInput.files[0]
+    );
+
+    document.getElementById("status").innerHTML =
+        '<p class="loading">Processing OCR...</p>';
+
+    document.getElementById("result").innerHTML = "";
+
+    try{
+
+        const response = await fetch(
+            "document-extractor/upload",
+            {
+                method:"POST",
+                body:formData
+            }
+        );
+
+        const data = await response.json();
+
+        document.getElementById("status").innerHTML =
+            "<p>Completed</p>";
+
+        document.getElementById("result").innerText =
+            data.text;
+
+    }
+    catch(error){
+
+        document.getElementById("status").innerHTML =
+            "<p>Error while processing file</p>";
+
+        console.error(error);
+    }
+}
+
+</script>
+
+</body>
+</html>

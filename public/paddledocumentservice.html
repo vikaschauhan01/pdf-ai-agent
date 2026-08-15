@@ -1,0 +1,275 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR Comparison Dashboard</title>
+
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            margin:40px;
+        }
+
+        h1{
+            margin-bottom:20px;
+        }
+
+        .container{
+            display:flex;
+            gap:20px;
+        }
+
+        .card{
+            flex:1;
+            border:1px solid #ddd;
+            border-radius:10px;
+            padding:20px;
+        }
+
+        textarea{
+            width:100%;
+            height:300px;
+        }
+
+        .stats{
+            margin-top:10px;
+        }
+
+        button{
+            padding:10px 20px;
+            cursor:pointer;
+        }
+    </style>
+</head>
+<body>
+
+<h1>OCR Comparison Dashboard</h1>
+
+<input type="file" id="pdfFile">
+
+<button onclick="runComparison()">
+    Compare OCR Engines
+</button>
+
+<hr>
+
+<div class="container">
+
+    <div class="card">
+        <h2>Tesseract OCR</h2>
+
+        <div class="stats">
+            <p><b>Time:</b> <span id="tesseractTime">-</span></p>
+            <p><b>Characters:</b> <span id="tesseractChars">-</span></p>
+            <p><b>Confidence:</b> <span id="tesseractConfidence">-</span></p>
+        </div>
+
+        <textarea id="tesseractText"></textarea>
+    </div>
+
+    <div class="card">
+        <h2>Paddle OCR</h2>
+
+        <div class="stats">
+            <p><b>Time:</b> <span id="paddleTime">-</span></p>
+            <p><b>Characters:</b> <span id="paddleChars">-</span></p>
+        </div>
+
+        <textarea id="paddleText"></textarea>
+    </div>
+
+</div>
+
+<script>
+
+async function runComparison(){
+
+    const file =
+        document.getElementById("pdfFile")
+        .files[0];
+
+    if(!file){
+
+        alert("Select PDF");
+
+        return;
+    }
+
+    const formData =
+        new FormData();
+
+    formData.append(
+        "pdf",
+        file
+    );
+
+    const response =
+        await fetch(
+            "/compare-ocr",
+            {
+                method:"POST",
+                body:formData
+            }
+        );
+
+    const result =
+        await response.json();
+
+
+    document.getElementById(
+        "tesseractTime"
+    ).innerText =
+        result.tesseract.processingTime + " ms";
+
+    document.getElementById(
+        "tesseractChars"
+    ).innerText =
+        result.tesseract.characters;
+
+    document.getElementById(
+        "tesseractConfidence"
+    ).innerText =
+        result.tesseract.confidence;
+
+    document.getElementById(
+        "tesseractText"
+    ).value =
+        result.tesseract.text;
+
+
+
+    document.getElementById(
+        "paddleTime"
+    ).innerText =
+        result.paddle.processingTime + " ms";
+
+    document.getElementById(
+        "paddleChars"
+    ).innerText =
+        result.paddle.characters;
+
+    document.getElementById(
+        "paddleText"
+    ).value =
+        result.paddle.text;
+}
+
+</script>
+
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paddle OCR Dashboard</title>
+
+    <style>
+        body{
+            font-family: Arial, sans-serif;
+            margin:40px;
+        }
+
+        .card{
+            border:1px solid #ddd;
+            border-radius:10px;
+            padding:20px;
+            margin-top:20px;
+        }
+
+        textarea{
+            width:100%;
+            height:400px;
+        }
+
+        button{
+            padding:10px 20px;
+            cursor:pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Paddle OCR Dashboard</h1>
+
+    <input type="file" id="pdfFile">
+
+    <button onclick="runPaddleOCR()">
+        Extract Text
+    </button>
+
+    <div class="card">
+
+        <h2>Paddle OCR Result</h2>
+
+        <p>
+            <b>Processing Time:</b>
+            <span id="processingTime">-</span>
+        </p>
+
+        <p>
+            <b>Characters Extracted:</b>
+            <span id="characters">-</span>
+        </p>
+
+        <textarea id="ocrText"></textarea>
+
+    </div>
+
+<script>
+
+async function runPaddleOCR(){
+
+    const file =
+        document.getElementById("pdfFile")
+        .files[0];
+
+    if(!file){
+        alert("Select PDF");
+        return;
+    }
+
+    const formData = new FormData();
+
+    formData.append(
+        "document",
+        file
+    );
+
+    const response = await fetch(
+        "/paddle-ocr/upload",
+        {
+            method:"POST",
+            body:formData
+        }
+    );
+
+    const result =
+        await response.json();
+
+    document.getElementById(
+        "processingTime"
+    ).innerText =
+        result.processingTime || "-";
+
+    document.getElementById(
+        "characters"
+    ).innerText =
+        result.text
+            ? result.text.length
+            : 0;
+
+    document.getElementById(
+        "ocrText"
+    ).value =
+        result.text || "";
+}
+
+</script>
+
+</body>
+</html>

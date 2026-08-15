@@ -1,0 +1,5 @@
+node_modules/
+.env
+credentials.json
+uploads/
+python-service/venv/

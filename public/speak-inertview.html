@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Voice Interviewer</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --card: #161f30;
+      --accent: #0066ff;
+      --text: #f8fafc;
+      --text-sub: #94a3b8;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 30px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+      border: 1px solid #2e3a52;
+    }
+
+    h1,
+    h2 {
+      margin-top: 0;
+    }
+
+    .upload-zone {
+      border: 2px dashed var(--accent);
+      padding: 30px;
+      text-align: center;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 15px;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .badge {
+      display: inline-block;
+      background: #2563eb;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 13px;
+      margin-right: 6px;
+      margin-bottom: 6px;
+    }
+
+    .visualizer {
+      height: 80px;
+      background: #090d14;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>🎙️Voice Assessment</h1>
+
+    <!-- 1. Resume Upload Card -->
+    <div class="card" id="uploadCard">
+      <h2>Step 1: Upload Candidate Resume</h2>
+      <div class="upload-zone" onclick="document.getElementById('resumeInput').click()">
+        <p>Click here or drop your PDF Resume file</p>
+        <input type="file" id="resumeInput" accept=".pdf" style="display: none;" />
+      </div>
+      <button class="btn" id="uploadBtn" onclick="uploadResume()">Parse Resume</button>
+      <p id="statusMsg" style="color: var(--text-sub);"></p>
+    </div>
+
+    <!-- 2. Candidate Overview & Interview Room -->
+    <div class="card" id="interviewCard" style="display: none;">
+      <h2>Step 2: Candidate Verified</h2>
+      <h3 id="candidateName">Candidate Name</h3>
+      <div id="skillsContainer"></div>
+
+      <hr style="border-color: #2e3a52; margin: 20px 0;" />
+
+      <h3>Live Voice Interview Room</h3>
+      <p style="color: var(--text-sub)">Gemini will conduct a 3-round technical voice interview based on your parsed
+        skills.</p>
+
+      <div class="visualizer">
+        <span id="audioStatus">Microphone Off</span>
+      </div>
+
+      <button class="btn" id="startVoiceBtn" onclick="startInterview()">Start Voice Session</button>
+    </div>
+  </div>
+
+  <script>
+    let parsedProfileData = null;
+
+    async function uploadResume() {
+      const input = document.getElementById('resumeInput');
+      const statusMsg = document.getElementById('statusMsg');
+      const uploadBtn = document.getElementById('uploadBtn');
+
+      if (!input.files || input.files.length === 0) {
+        alert('Please select a PDF resume file first.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('resume', input.files[0]);
+
+      try {
+        uploadBtn.disabled = true;
+        statusMsg.innerText = 'Extracting resume context with Gemini...';
+
+        const response = await fetch('/api/upload-resume', {
+          method: 'POST',
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          parsedProfileData = data.profile;
+          renderCandidateProfile(data.profile);
+          statusMsg.innerText = 'Resume successfully parsed!';
+        } else {
+          statusMsg.innerText = 'Error: ' + data.error;
+        }
+      } catch (err) {
+        console.error(err);
+        statusMsg.innerText = 'Failed to upload and parse resume.';
+      } finally {
+        uploadBtn.disabled = false;
+      }
+    }
+
+    function renderCandidateProfile(profile) {
+      document.getElementById('uploadCard').style.display = 'none';
+      document.getElementById('interviewCard').style.display = 'block';
+
+      document.getElementById('candidateName').innerText = profile.candidateName || 'Candidate';
+
+      const skillsContainer = document.getElementById('skillsContainer');
+      skillsContainer.innerHTML = '<strong>Primary Skills:</strong><br/>';
+
+      if (profile.primarySkills) {
+        profile.primarySkills.forEach(skill => {
+          const badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.innerText = skill;
+          skillsContainer.appendChild(badge);
+        });
+      }
+    }
+
+    function startInterview() {
+      const audioStatus = document.getElementById('audioStatus');
+      audioStatus.innerText = '🎙️ Voice Session Initialized - Listening...';
+      alert('Voice interview session active! Gemini will initiate the first question.');
+    }
+
+  </script>
+</body>
+
+</html>

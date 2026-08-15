@@ -1,0 +1,620 @@
+<!-- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Specification Sheet Processor</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 40px 20px;
+        }
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #0f172a;
+        }
+        h2 {
+            margin-top: 40px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+        .upload-card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 32px;
+        }
+        .form-group {
+            margin-bottom: 16px;
+        }
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: #f8fafc;
+            cursor: pointer;
+        }
+        button {
+            background-color: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        button:hover {
+            background-color: #1d4ed8;
+        }
+        .loading {
+            display: none;
+            color: #2563eb;
+            font-weight: 500;
+            margin-top: 12px;
+        }
+        .table-container {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+        .new-scan {
+            border: 2px solid #2563eb;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+        th, td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+        }
+        .meta-section {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+        .spec-label {
+            font-weight: 600;
+            color: #334155;
+        }
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #64748b;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Specification Sheet Parser</h1>
+    
+  
+    <div class="upload-card">
+        <div class="form-group">
+            <label for="fileInput">Select PDF Document or Specification Image:</label>
+            <input type="file" id="fileInput" accept="application/pdf, image/*" multiple>
+        </div>
+        <button id="processBtn" onclick="runProcessingPipeline()">Process Document Page</button>
+        <div id="loadingText" class="loading">Uploading asset, running extraction, and structuring data...</div>
+    </div>
+
+
+    <div id="liveViewSection" style="display: none;">
+        <h3 style="color: #2563eb; margin-bottom: 8px;">✨ Newly Processed Item (Not Saved Yet to View Below)</h3>
+        <div class="table-container new-scan">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Item No.</th>
+                        <th style="width: 25%;">Project & Layout Meta</th>
+                        <th style="width: 25%;">Product Details</th>
+                        <th style="width: 20%;">Dimensions</th>
+                        <th style="width: 20%;">Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="liveTableBody"></tbody>
+            </table>
+        </div>
+    </div>
+
+   
+    <h2>Saved Project Specification Items</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 10%;">Item No.</th>
+                    <th style="width: 25%;">Project & Layout Meta</th>
+                    <th style="width: 25%;">Product Details</th>
+                    <th style="width: 20%;">Dimensions</th>
+                    <th style="width: 20%;">Notes</th>
+                </tr>
+            </thead>
+            <tbody id="databaseTableBody">
+                <tr>
+                    <td colspan="5" class="no-data">Loading historical specification records...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // Automatically retrieve database index data when screen loads
+    window.addEventListener('DOMContentLoaded', fetchSavedItems);
+
+    // Helper function to convert item object data into modular HTML Table rows cleanly
+    function generateRowHtml(item) {
+        return `
+            <tr>
+                <td><strong>${item.item_number || 'N/A'}</strong></td>
+                <td>
+                    <div class="meta-section">
+                        <span class="spec-label">Project:</span> ${item.project_name || 'N/A'}<br>
+                        <span class="spec-label">Scheme:</span> ${item.scheme || 'N/A'}<br>
+                        <span class="spec-label">InnCode:</span> ${item.inn_code || 'N/A'}<br>
+                        <span class="spec-label">Renovation #:</span> ${item.renovation_id || 'N/A'}<br>
+                        <span class="spec-label">Issue Date:</span> ${item.issue_date || 'N/A'}<br>
+                        <span class="spec-label">Revisions:</span> ${item.revisions || 'N/A'}
+                    </div>
+                </td>
+                <td>
+                    <div class="meta-section">
+                        <span class="spec-label">Name:</span> ${item.item_name || 'N/A'}<br>
+                        <span class="spec-label">Product:</span> ${item.product_name || 'N/A'}<br>
+                        <span class="spec-label">Model #:</span> ${item.product_number || 'N/A'}<br>
+                        <span class="spec-label">Finish:</span> ${item.color_finish || 'N/A'}
+                    </div>
+                </td>
+                <td>${item.dimensions || 'N/A'}</td>
+                <td>${item.notes || 'N/A'}</td>
+            </tr>
+        `;
+    }
+
+    // 1. Fetch entire historical log history from Supabase via Node API backend handler
+    async function fetchSavedItems() {
+        const dbTableBody = document.getElementById('databaseTableBody');
+        try {
+            const response = await fetch('/api/gemini-ocr/items');
+            const result = await response.json();
+            
+            if (!result.success) throw new Error(result.error);
+            
+            if (result.data.length === 0) {
+                dbTableBody.innerHTML = `<tr><td colspan="5" class="no-data">No database records found yet. Upload a document to start!</td></tr>`;
+                return;
+            }
+            
+            // Map rows directly to screen list view
+            dbTableBody.innerHTML = result.data.map(item => generateRowHtml(item)).join('');
+        } catch (err) {
+            dbTableBody.innerHTML = `<tr><td colspan="5" class="no-data" style="color: #ef4444;">Failed to load saved items: ${err.message}</td></tr>`;
+        }
+    }
+
+    // 2. Main upload routine orchestrating state changes
+    async function runProcessingPipeline() {
+        const fileInput = document.getElementById('fileInput');
+        const processBtn = document.getElementById('processBtn');
+        const loadingText = document.getElementById('loadingText');
+        const liveViewSection = document.getElementById('liveViewSection');
+        const liveTableBody = document.getElementById('liveTableBody');
+
+        if (!fileInput.files || fileInput.files.length === 0) {
+            alert('Please select a file to upload.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+
+        processBtn.disabled = true;
+        loadingText.style.display = 'block';
+
+        try {
+            const response = await fetch('/api/gemini-ocr/process-spec', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error);
+
+            // Display newly scanned entry item instantly in prompt card view
+            liveTableBody.innerHTML = generateRowHtml(result.data);
+            liveViewSection.style.display = 'block';
+
+            // Refresh historical dashboard immediately to sync database indices layout updates
+            await fetchSavedItems();
+
+        } catch (error) {
+            alert('Processing pipeline error: ' + error.message);
+        } finally {
+            processBtn.disabled = false;
+            loadingText.style.display = 'none';
+        }
+    }
+</script>
+
+</body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Specification Sheet Processor</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+            margin: 0;
+            padding: 40px 40px;
+        }
+
+        .container {
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+
+        h1,
+        h2 {
+            color: #0f172a;
+        }
+
+        h2 {
+            margin-top: 40px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 8px;
+        }
+
+        .upload-card {
+            background: #ffffff;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        input[type="file"] {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            border: 1px dashed #cbd5e1;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 14px;
+            background-color: #f8fafc;
+            cursor: pointer;
+        }
+
+        button {
+            background-color: #2563eb;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        .loading {
+            display: none;
+            color: #2563eb;
+            font-weight: 500;
+            margin-top: 12px;
+        }
+
+        .table-container {
+            background: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            margin-bottom: 32px;
+        }
+
+        .new-scan {
+            border: 2px solid #10b981;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th,
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            vertical-align: top;
+            font-size: 14px;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        .meta-section {
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+
+        .spec-label {
+            font-weight: 600;
+            color: #334155;
+        }
+
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #64748b;
+        }
+    </style>
+</head>
+
+<body>
+
+
+    <div class="section">
+        <h1>Specification Sheet Parser (Bulk Upload)</h1>
+
+        <!-- Upload Control Section -->
+        <div class="upload-card">
+            <div class="form-group">
+                <label for="fileInput">Select PDF Documents or Specification Images :</label>
+                <!-- Added the "multiple" attribute here -->
+                <input type="file" id="fileInput" accept="application/pdf, image/*" multiple>
+            </div>
+            <button id="processBtn" onclick="runProcessingPipeline()">Process All Documents</button>
+            <div id="loadingText" class="loading">Initializing document pipeline...</div>
+        </div>
+
+        <!-- Live Temporary Newly Scanned Items View Container -->
+        <div id="liveViewSection" style="display: none;">
+            <h3 style="color: #10b981; margin-bottom: 8px;">✨ Newly Processed Bulk Batch Items</h3>
+            <div class="table-container new-scan">
+                <table>
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">Item No.</th>
+                            <th style="width: 10%;">Prodcut image.</th>
+                            <th style="width: 20%;">Project & Layout Meta</th>
+                            <th style="width: 20%;">Product Details</th>
+                            <th style="width: 15%;">Dimensions</th>
+                            <th style="width: 20%;">Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody id="liveTableBody"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Persistent Saved Database View Table -->
+        <h2>Saved Project Specification Items</h2>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Item No.</th>
+                        <th style="width: 10%;">Prodcut image.</th>
+                        <th style="width: 20%;">Project & Layout Meta</th>
+                        <th style="width: 20%;">Product Details</th>
+                        <th style="width: 15%;">Dimensions</th>
+                        <th style="width: 20%;">Notes</th>
+                    </tr>
+                </thead>
+                <tbody id="databaseTableBody">
+                    <tr>
+                        <td colspan="5" class="no-data">Loading historical specification records...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('DOMContentLoaded', fetchSavedItems);
+
+        // function generateRowHtml(item) {
+        //     return `
+        //         <tr>
+        //             <td><strong>${item.item_number || 'N/A'}</strong></td>
+        //             <td>
+        //                 <div class="meta-section">
+        //                     <span class="spec-label">Project:</span> ${item.project_name || 'N/A'}<br>
+        //                     <span class="spec-label">Scheme:</span> ${item.scheme || 'N/A'}<br>
+        //                     <span class="spec-label">InnCode:</span> ${item.inn_code || 'N/A'}<br>
+        //                     <span class="spec-label">Renovation #:</span> ${item.renovation_id || 'N/A'}<br>
+        //                     <span class="spec-label">Issue Date:</span> ${item.issue_date || 'N/A'}<br>
+        //                     <span class="spec-label">Revisions:</span> ${item.revisions || 'N/A'}
+        //                 </div>
+        //             </td>
+        //             <td>
+        //                 <div class="meta-section">
+        //                     <span class="spec-label">Name:</span> ${item.item_name || 'N/A'}<br>
+        //                     <span class="spec-label">Product:</span> ${item.product_name || 'N/A'}<br>
+        //                     <span class="spec-label">Model #:</span> ${item.product_number || 'N/A'}<br>
+        //                     <span class="spec-label">Finish:</span> ${item.color_finish || 'N/A'}
+        //                 </div>
+        //             </td>
+        //             <td>${item.dimensions || 'N/A'}</td>
+        //             <td>${item.notes || 'N/A'}</td>
+        //         </tr>
+        //     `;
+        // }
+
+
+        function generateRowHtml(item) {
+    let imageTag = '<span style="color:#94a3b8; font-size: 13px;">No Image</span>';
+
+    if (item.product_images && Array.isArray(item.product_images) && item.product_images.length > 0) {
+        const imagesHtml = item.product_images.map((url, index) => `
+            <a href="${url}" target="_blank" rel="noopener noreferrer" title="View Full Image ${index + 1}" style="flex-shrink: 0;">
+                <img src="${url}" 
+                     alt="Spec Image ${index + 1}" 
+                     style="width: 60px; height: 60px; border-radius: 6px; border: 1px solid #cbd5e1; object-fit: contain; background-color: #f8fafc; transition: transform 0.2s ease, border-color 0.2s ease;"
+                     onmouseover="this.style.transform='scale(1.08)'; this.style.borderColor='#2563eb';"
+                     onmouseout="this.style.transform='scale(1)'; this.style.borderColor='#cbd5e1';" />
+            </a>
+        `).join('');
+
+        // Container with max-height and custom scrollbar to keep table column width stable
+        imageTag = `
+            <div style="display: flex; flex-wrap: wrap; gap: 6px; max-width: 140px; max-height: 130px; overflow-y: auto; padding: 2px;">
+                ${imagesHtml}
+            </div>
+        `;
+    }
+
+    return `
+        <tr>
+            <td style="width: 110px;"><strong>${item.item_number || 'N/A'}</strong></td>
+            <td style="width: 160px; vertical-align: top;">${imageTag}</td>
+            <td style="width: 200px;">
+                <div class="meta-section">
+                    <span class="spec-label">Project:</span> ${item.project_name || 'N/A'}<br>
+                    <span class="spec-label">Scheme:</span> ${item.scheme || 'N/A'}<br>
+                    <span class="spec-label">InnCode:</span> ${item.inn_code || 'N/A'}<br>
+                    <span class="spec-label">Renovation #:</span> ${item.renovation_id || 'N/A'}
+                </div>
+            </td>
+            <td>
+                <div class="meta-section">
+                    <span class="spec-label">Name:</span> ${item.item_name || 'N/A'}<br>
+                    <span class="spec-label">Product:</span> ${item.product_name || 'N/A'}<br>
+                    <span class="spec-label">Model #:</span> ${item.product_number || 'N/A'}<br>
+                    <span class="spec-label">Finish:</span> ${item.color_finish || 'N/A'}
+                </div>
+            </td>
+            <td style="width: 150px;">${item.dimensions || 'N/A'}</td>
+            <td>${item.notes || 'N/A'}</td>
+        </tr>
+    `;
+}
+
+
+        async function fetchSavedItems() {
+            const dbTableBody = document.getElementById('databaseTableBody');
+            try {
+                const response = await fetch('/api/gemini-ocr/items');
+                const result = await response.json();
+
+                if (!result.success) throw new Error(result.error);
+
+                if (result.data.length === 0) {
+                    dbTableBody.innerHTML = `<tr><td colspan="5" class="no-data">No database records found yet. Upload documents to start!</td></tr>`;
+                    return;
+                }
+
+                dbTableBody.innerHTML = result.data.map(item => generateRowHtml(item)).join('');
+            } catch (err) {
+                dbTableBody.innerHTML = `<tr><td colspan="5" class="no-data" style="color: #ef4444;">Failed to load saved items: ${err.message}</td></tr>`;
+            }
+        }
+
+        async function runProcessingPipeline() {
+            const fileInput = document.getElementById('fileInput');
+            const processBtn = document.getElementById('processBtn');
+            const loadingText = document.getElementById('loadingText');
+            const liveViewSection = document.getElementById('liveViewSection');
+            const liveTableBody = document.getElementById('liveTableBody');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Please select at least one file to upload.');
+                return;
+            }
+
+            const files = fileInput.files;
+            const formData = new FormData();
+
+            // Append all files to the single form parameter key matching the backend "files" array expectation
+            for (let i = 0; i < files.length; i++) {
+                formData.append('files', files[i]);
+            }
+
+            processBtn.disabled = true;
+            loadingText.style.display = 'block';
+            loadingText.innerText = `Uploading and parsing ${files.length} document(s)... Please wait.`;
+
+            liveTableBody.innerHTML = '';
+            liveViewSection.style.display = 'none';
+
+            try {
+                const response = await fetch('/api/gemini-ocr/process-spec', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error);
+
+                // Render all items returned from the batch request loop
+                liveTableBody.innerHTML = result.data.map(item => generateRowHtml(item)).join('');
+                liveViewSection.style.display = 'block';
+
+                // Sync structural listing
+                await fetchSavedItems();
+
+            } catch (error) {
+                alert('Bulk processing error: ' + error.message);
+            } finally {
+                processBtn.disabled = false;
+                loadingText.style.display = 'none';
+            }
+        }
+    </script>
+
+</body>
+
+</html>

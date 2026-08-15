@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Product Scraper</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+    .card { border: 1px solid #ddd; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    input[type="text"] { width: 100%; padding: 12px; margin: 10px 0 20px 0; box-sizing: border-box; }
+    button { width: 100%; padding: 12px; background: #232f3e; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 16px; font-weight: bold; }
+    button:disabled { background: #888; }
+    #status { margin-top: 15px; font-weight: bold; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Product Scraper</h2>
+    <label for="urlInput">Paste Web / Product Link:</label>
+    <input type="text" id="urlInput" placeholder="https://www.amazon.com/dp/B08N5WRWNW" />
+    <button id="btn" onclick="scrapeProduct()">Extract & Save to Excel</button>
+    <div id="status"></div>
+  </div>
+
+  <script>
+    async function scrapeProduct() {
+      const urlInput = document.getElementById('urlInput');
+      const btn = document.getElementById('btn');
+      const status = document.getElementById('status');
+      const url = urlInput.value.trim();
+
+      if (!url) return alert('Please paste a valid URL!');
+
+      btn.disabled = true;
+      btn.innerText = 'Extracting data ...';
+      status.style.color = '#333';
+      status.innerText = '⏳ Fetching webpage and generating row...';
+
+      try {
+        const response = await fetch('/api/scrape', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+          status.style.color = 'green';
+          status.innerText = `✅ Success! Added "${data.title}" to Excel master sheet. (Total items: ${data.totalCount})`;
+          urlInput.value = ''; // Reset input field
+        } else {
+          status.style.color = 'red';
+          status.innerText = '❌ Error: ' + data.error;
+        }
+      } catch (err) {
+        status.style.color = 'red';
+        status.innerText = '❌ Network error occurred.';
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Extract & Save to Excel';
+      }
+    }
+  </script>
+</body>
+</html>

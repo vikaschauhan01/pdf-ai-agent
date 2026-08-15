@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OCR.space Cloud Sandbox</title>
+    <style>
+        :root {
+            --bg-base: #f8fafc;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --primary: #0284c7; /* Sky blue theme for cloud engine */
+            --txt-main: #0f172a;
+        }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background: var(--bg-base);
+            color: var(--txt-main);
+            margin: 0;
+            padding: 24px;
+        }
+        .header {
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 16px;
+        }
+        .upload-section {
+            background: var(--surface);
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            margin-bottom: 24px;
+            transition: border-color 0.2s;
+        }
+        .upload-section:hover {
+            border-color: var(--primary);
+        }
+        .file-input { display: none; }
+        .btn {
+            background: var(--primary);
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .engine-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .engine-header {
+            background: #f1f5f9;
+            padding: 12px 16px;
+            font-weight: 600;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .metrics-badge {
+            font-size: 12px;
+            background: #e2e8f0;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+        .output-area {
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            background: #fafafa;
+            overflow-y: auto;
+            min-height: 500px;
+        }
+        .status-msg {
+            color: #64748b;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>OCR.space Engine 3 Tester</h1>
+        <p>Upload a document to view the raw text extraction returned from the cloud API ecosystem.</p>
+    </div>
+
+    <!-- Drop/Select File Container -->
+    <div class="upload-section" id="dropZone">
+        <p>Drag & drop your PDF or image here, or click to browse</p>
+        <button class="btn" onclick="document.getElementById('fileSelector').click()">Choose Document</button>
+        <input type="file" id="fileSelector" class="file-input" accept=".pdf,.png,.jpg,.jpeg,.bmp">
+        <div id="fileNameDisplay" style="margin-top: 12px; font-weight: 500;"></div>
+    </div>
+
+    <!-- Isolated Output Panel -->
+    <div class="engine-card">
+        <div class="engine-header">
+            <span>OCR.space Raw Text Output (Cloud Engine 3)</span>
+            <span id="processingTime" class="metrics-badge">- ms</span>
+        </div>
+        <pre id="outputArea" class="output-area status-msg">Awaiting document upload...</pre>
+    </div>
+
+    <script>
+        const fileSelector = document.getElementById('fileSelector');
+        const fileNameDisplay = document.getElementById('fileNameDisplay');
+        const outputArea = document.getElementById('outputArea');
+        const processingTime = document.getElementById('processingTime');
+
+        fileSelector.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Display current file info
+            fileNameDisplay.textContent = `Selected: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+            
+            // Set loading state
+            outputArea.classList.add('status-msg');
+            outputArea.textContent = "Sending file payload to OCR.space cloud servers...";
+            processingTime.textContent = "- ms";
+
+            const formData = new FormData();
+            formData.append('document', file);
+
+            try {
+                // Hits your newly isolated OCR.space route
+                const response = await fetch('/ocr-space/compare', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+
+                if (result.success) {
+                    outputArea.classList.remove('status-msg');
+                    outputArea.textContent = result.raw_text || "No text was detected in this document.";
+                    processingTime.textContent = `${result.processing_time_ms} ms`;
+                } else {
+                    throw new Error(result.error || "Failed to process the document.");
+                }
+            } catch (error) {
+                outputArea.classList.add('status-msg');
+                outputArea.textContent = `Error: ${error.message}`;
+                processingTime.textContent = "Err";
+            }
+        });
+    </script>
+</body>
+</html>
